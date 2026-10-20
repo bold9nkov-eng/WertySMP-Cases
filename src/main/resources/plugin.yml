@@ -1,0 +1,15 @@
+name: WertySMP-Cases
+version: 1.2.0
+main: ru.wertysmp.cases.WertyCases
+api-version: '1.21'
+author: WertySMP
+description: Кейсы с независимыми шансами наград для WertySMP
+commands:
+  wcases:
+    description: Выдача кейсов WertySMP
+    usage: /wcases give <игрок> <ordinary|epic|legendary> [количество]
+    aliases: [wertycases, кейсы]
+permissions:
+  wertysmpcases.admin:
+    description: Позволяет выдавать кейсы игрокам
+    default: op
