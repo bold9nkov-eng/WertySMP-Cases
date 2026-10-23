@@ -52,6 +52,10 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
 
     @Override public void onEnable() {
         saveDefaultConfig();
+        org.bukkit.configuration.file.YamlConfiguration bundledDefaults = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(Objects.requireNonNull(getResource("config.yml")), java.nio.charset.StandardCharsets.UTF_8));
+        getConfig().setDefaults(bundledDefaults);
+        getConfig().options().copyDefaults(true);
+        saveConfig();
         try { dailyZone = java.time.ZoneId.of(getConfig().getString("daily.timezone", "Europe/Moscow")); } catch (Exception ex) { getLogger().warning("Неверный daily.timezone, используется Europe/Moscow"); dailyZone = java.time.ZoneId.of("Europe/Moscow"); }
         itemKey = new NamespacedKey(this, "case_type");
         blockKey = new NamespacedKey(this, "placed_case_type");
