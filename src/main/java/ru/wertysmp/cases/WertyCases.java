@@ -413,9 +413,10 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         String[] types={"ordinary","epic","legendary","void"};
         Material[] icons={Material.CHEST,Material.TRAPPED_CHEST,Material.ENDER_CHEST,Material.RESPAWN_ANCHOR};
         for(int i=0;i<types.length;i++){
+            final String type=types[i];
             ItemStack item=new ItemStack(icons[i]); ItemMeta meta=item.getItemMeta();
-            meta.setDisplayName("§d"+caseName(types[i]));
-            List<String> lore=new ArrayList<>(); stats.entrySet().stream().sorted((a,b)->Integer.compare(b.getValue().getOrDefault(types[i],0),a.getValue().getOrDefault(types[i],0))).limit(10).forEach(e->{String name=Bukkit.getOfflinePlayer(e.getKey()).getName(); lore.add("§7"+(name==null?e.getKey().toString().substring(0,8):name)+" §8— §f"+e.getValue().getOrDefault(types[i],0));});
+            meta.setDisplayName("§d"+caseName(type));
+            List<String> lore=new ArrayList<>(); stats.entrySet().stream().sorted((a,b)->Integer.compare(b.getValue().getOrDefault(type,0),a.getValue().getOrDefault(type,0))).limit(10).forEach(e->{String name=Bukkit.getOfflinePlayer(e.getKey()).getName(); lore.add("§7"+(name==null?e.getKey().toString().substring(0,8):name)+" §8— §f"+e.getValue().getOrDefault(type,0));});
             if(lore.isEmpty()) lore.add("§7Пока нет открытий"); meta.setLore(lore); item.setItemMeta(meta); inv.setItem(10+i*2,item);
         }
         p.openInventory(inv);
