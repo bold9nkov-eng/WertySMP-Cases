@@ -146,20 +146,20 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         block.setType(Material.AIR, false);
         int duration = switch (type) { case "epic" -> 80; case "legendary" -> 120; case "void" -> 160; default -> 48; };
         player.sendMessage("§5§lWertySMP §8» §fОткрывается " + caseName(type) + "§f...");
-        player.playSound(location, type.equals("legendary") ? Sound.BLOCK_ENDER_CHEST_OPEN : Sound.BLOCK_CHEST_OPEN, 0.9f, type.equals("ordinary") ? 1.2f : 0.7f);
+        player.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_ENDER_CHEST_OPEN : Sound.BLOCK_CHEST_OPEN, 0.9f, type.equals("ordinary") ? 1.2f : 0.7f);
 
         new org.bukkit.scheduler.BukkitRunnable() {
             int tick = 0;
             @Override public void run() {
                 double progress = (double) tick / duration;
                 double radius = 0.25 + 0.85 * progress;
-                double angle = tick * (type.equals("legendary") ? 0.42 : type.equals("epic") ? 0.30 : 0.22);
+                double angle = tick * ((type.equals("legendary") || type.equals("void")) ? 0.42 : type.equals("epic") ? 0.30 : 0.22);
                 Location center = location.clone().add(0, 0.65 + Math.sin(angle) * 0.12, 0);
                 for (int i = 0; i < 3; i++) {
                     double a = angle + i * Math.PI * 2 / 3;
                     Location point = center.clone().add(Math.cos(a) * radius, Math.sin(angle * 0.7 + i) * 0.18, Math.sin(a) * radius);
-                    if (type.equals("legendary")) {
-                        world.spawnParticle(Particle.DUST, point, 3, 0.05, 0.08, 0.05, new DustOptions(Color.fromRGB((tick % 16 < 8) ? 12 : 90, 0, (tick % 16 < 8) ? 18 : 190), 1.2f));
+                    if (type.equals("legendary") || type.equals("void")) {
+                        world.spawnParticle(Particle.DUST, point, type.equals("void") ? 6 : 3, 0.05, 0.08, 0.05, new DustOptions(Color.fromRGB((tick % 16 < 8) ? 12 : 90, 0, (tick % 16 < 8) ? 18 : 190), type.equals("void") ? 1.8f : 1.2f));
                         world.spawnParticle(Particle.PORTAL, point, 2, 0.04, 0.08, 0.04, 0.02);
                     } else if (type.equals("epic")) {
                         world.spawnParticle(Particle.WITCH, point, 3, 0.06, 0.08, 0.06, 0.02);
@@ -169,10 +169,15 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
                         world.spawnParticle(Particle.HAPPY_VILLAGER, point, 2, 0.06, 0.08, 0.06, 0.01);
                     }
                 }
-                if (tick % 8 == 0) player.playSound(location, type.equals("legendary") ? Sound.BLOCK_BEACON_AMBIENT : Sound.BLOCK_NOTE_BLOCK_PLING, 0.35f, 0.6f + (float) progress * 1.3f);
+                if (tick % 8 == 0) player.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_BEACON_AMBIENT : Sound.BLOCK_NOTE_BLOCK_PLING, 0.35f, 0.6f + (float) progress * 1.3f);
                 if (tick >= duration) {
                     world.spawnParticle(Particle.EXPLOSION, center, type.equals("legendary") ? 2 : 1, 0.2, 0.2, 0.2, 0);
-                    if (type.equals("legendary")) {
+                    if (type.equals("void")) {
+                        world.spawnParticle(Particle.DUST, center, 180, 0.9, 0.9, 0.9, new DustOptions(Color.fromRGB(20, 0, 35), 2.4f));
+                        world.spawnParticle(Particle.PORTAL, center, 160, 0.8, 0.8, 0.8, 0.35);
+                        world.spawnParticle(Particle.WITCH, center, 100, 0.7, 0.7, 0.7, 0.12);
+                        player.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.55f);
+                    } else if (type.equals("legendary")) {
                         world.spawnParticle(Particle.DUST, center, 100, 0.8, 0.8, 0.8, new DustOptions(Color.fromRGB(35, 0, 55), 2.0f));
                         world.spawnParticle(Particle.PORTAL, center, 100, 0.8, 0.8, 0.8, 0.25);
                         player.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.7f);
