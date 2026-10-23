@@ -9,12 +9,11 @@ commands:
     description: Выдача кейсов WertySMP
     usage: /wcases give <игрок> <ordinary|epic|legendary> [количество]
     aliases: [wertycases, кейсы, cases, wcaces]
-permissions:
-  wertysmpcases.admin:
-    description: Позволяет выдавать кейсы игрокам
-    default: op
-
   dailycase:
     description: Открыть меню ежедневных наград
     usage: /dailycase
     aliases: [daily, dailycases]
+permissions:
+  wertysmpcases.admin:
+    description: Позволяет выдавать кейсы игрокам
+    default: op
