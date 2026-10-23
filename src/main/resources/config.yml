@@ -20,6 +20,12 @@ cases:
       - '&7Поставь на землю и нажми ПКМ'
       - '&5ПУСТОТА • &fлегендарная добыча'
       - '&8Тёмная энергия WertySMP'
+  void:
+    name: '&5&l☄ Кейс Пустоты ☄'
+    lore:
+      - '&8Премиальный кейс WertySMP'
+      - '&dНажми ПКМ для открытия'
+      - '&5Награды Пустоты'
 
 # Каждый пункт — отдельная проверка шанса, а не выбор одного предмета из списка.
 rewards:
@@ -383,3 +389,126 @@ rewards:
       max: 15
       chance: 30
       display: '&6Золотые яблоки'
+
+
+  void:
+    elytra:
+      material: ELYTRA
+      min: 1
+      max: 1
+      chance: 2.264808
+      display: '&delytra'
+    ancient_debris:
+      material: ANCIENT_DEBRIS
+      min: 4
+      max: 4
+      chance: 9.059233
+      display: '&dancient debris'
+    netherite_ingot:
+      material: NETHERITE_INGOT
+      min: 1
+      max: 1
+      chance: 4.529617
+      display: '&dnetherite ingot'
+    netherite_scrap:
+      material: NETHERITE_SCRAP
+      min: 4
+      max: 4
+      chance: 9.059233
+      display: '&dnetherite scrap'
+    enchanted_golden_apple:
+      material: ENCHANTED_GOLDEN_APPLE
+      min: 1
+      max: 1
+      chance: 2.264808
+      display: '&denchanted golden apple'
+    totem:
+      material: TOTEM_OF_UNDYING
+      min: 1
+      max: 1
+      chance: 2.264808
+      display: '&dtotem'
+    shulker_shell:
+      material: SHULKER_SHELL
+      min: 2
+      max: 2
+      chance: 9.059233
+      display: '&dshulker shell'
+    diamond_block:
+      material: DIAMOND_BLOCK
+      min: 1
+      max: 1
+      chance: 6.794425
+      display: '&ddiamond block'
+    nether_star:
+      material: NETHER_STAR
+      min: 1
+      max: 1
+      chance: 2.264808
+      display: '&dnether star'
+    trident:
+      material: TRIDENT
+      min: 1
+      max: 1
+      chance: 1.132404
+      display: '&dtrident'
+    mace:
+      material: MACE
+      min: 1
+      max: 1
+      chance: 1.132404
+      display: '&dmace'
+    beacon:
+      material: BEACON
+      min: 1
+      max: 1
+      chance: 1.132404
+      display: '&dbeacon'
+    amethyst_shards:
+      material: AMETHYST_SHARD
+      min: 32
+      max: 32
+      chance: 11.324042
+      display: '&damethyst shards'
+    ender_pearls:
+      material: ENDER_PEARL
+      min: 5
+      max: 5
+      chance: 18.118467
+      display: '&dender pearls'
+    diamonds:
+      material: DIAMOND
+      min: 16
+      max: 16
+      chance: 4.529617
+      display: '&ddiamonds'
+    gold_blocks:
+      material: GOLD_BLOCK
+      min: 8
+      max: 8
+      chance: 4.529617
+      display: '&dgold blocks'
+    iron_blocks:
+      material: IRON_BLOCK
+      min: 16
+      max: 16
+      chance: 2.61324
+      display: '&diron blocks'
+    obsidian:
+      material: OBSIDIAN
+      min: 32
+      max: 32
+      chance: 2.61324
+      display: '&dobsidian'
+    golden_carrots:
+      material: GOLDEN_CARROT
+      min: 32
+      max: 32
+      chance: 2.61324
+      display: '&dgolden carrots'
+    experience_bottles:
+      material: EXPERIENCE_BOTTLE
+      min: 32
+      max: 32
+      chance: 2.700348
+      display: '&dexperience bottles'
