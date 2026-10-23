@@ -1,4 +1,7 @@
 # WertySMP Cases — Paper 1.21.11
+
+daily:
+  timezone: Europe/Moscow
 # Шансы независимые: каждый пункт проверяется отдельно при открытии кейса.
 # min/max задают случайное количество, включая обе границы.
 # Не меняй ключи материалов на русские названия: это Bukkit Material.
@@ -510,5 +513,5 @@ rewards:
       material: EXPERIENCE_BOTTLE
       min: 32
       max: 32
-      chance: 2.700348
+      chance: 2.700352
       display: '&dexperience bottles'
