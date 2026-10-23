@@ -415,6 +415,40 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         p.openInventory(inv);
     }
     private ItemStack named(Material material, String name) { ItemStack i=new ItemStack(material); ItemMeta m=i.getItemMeta(); m.setDisplayName(name); i.setItemMeta(m); return i; }
+
+    private void openEditorHome(Player p) {
+        org.bukkit.inventory.Inventory inv = Bukkit.createInventory(null, 27, "§4Редактор кейсов");
+        String[] types={"ordinary","epic","legendary","void"};
+        Material[] icons={Material.CHEST,Material.TRAPPED_CHEST,Material.ENDER_CHEST,Material.PURPLE_SHULKER_BOX};
+        for(int i=0;i<types.length;i++){
+            ItemStack item=new ItemStack(icons[i]); ItemMeta meta=item.getItemMeta();
+            meta.setDisplayName("§d"+caseName(types[i]));
+            meta.setLore(List.of("§7Нажми, чтобы редактировать награды","§8Изменения сохраняются в config.yml"));
+            item.setItemMeta(meta); inv.setItem(10+i*2,item);
+        }
+        p.openInventory(inv);
+    }
+    private void openRewardEditor(Player p, String type) {
+        ConfigurationSection section=getConfig().getConfigurationSection("rewards."+type);
+        org.bukkit.inventory.Inventory inv=Bukkit.createInventory(null,54,"§4Редактор наград: "+type);
+        if(section!=null){
+            int slot=0;
+            for(String key:section.getKeys(false)){
+                if(slot>=45) break;
+                ConfigurationSection reward=section.getConfigurationSection(key); if(reward==null) continue;
+                ItemStack item=createReward(reward); if(item==null) continue;
+                item.setAmount(Math.max(1,Math.min(item.getMaxStackSize(),reward.getInt("min",reward.getInt("amount",1)))));
+                ItemMeta meta=item.getItemMeta();
+                meta.setDisplayName(color(reward.getString("display",key)));
+                meta.setLore(List.of("§7Шанс: §e"+reward.getDouble("chance",0)+"%","§7Нажми, чтобы удалить награду"));
+                item.setItemMeta(meta); inv.setItem(slot++,item);
+            }
+        }
+        ItemStack add=named(Material.ANVIL,"§aДобавить предмет из руки");
+        ItemMeta meta=add.getItemMeta(); meta.setLore(List.of("§7Возьми предмет в основную руку","§7и нажми сюда. Шанс по умолчанию 100%.")); add.setItemMeta(meta);
+        inv.setItem(49,add); inv.setItem(45,named(Material.ARROW,"§eНазад")); p.openInventory(inv);
+    }
+
     private void openTop(Player p) {
         org.bukkit.inventory.Inventory inv=Bukkit.createInventory(null,27,"§5Топ кейсов");
         String[] types={"ordinary","epic","legendary","void"};
@@ -444,6 +478,48 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         if(title.startsWith("§5Награды:")) {
             e.setCancelled(true); if(e.getRawSlot()==45||e.getRawSlot()==53){String[] bits=title.split("\\("); int page=0; try{page=Integer.parseInt(bits[1].split("/")[0])-1;}catch(Exception ignored){} openPreview(p,title.contains("void")?"void":title.contains("epic")?"epic":title.contains("legendary")?"legendary":"ordinary",page+(e.getRawSlot()==53?1:-1));} return;
         }
+
+        if(title.equals("§4Редактор кейсов")) {
+            e.setCancelled(true);
+            if(!p.hasPermission("wertysmpcases.admin")) { p.closeInventory(); return; }
+            String[] types={"ordinary","epic","legendary","void"};
+            if(e.getRawSlot()==10||e.getRawSlot()==12||e.getRawSlot()==14||e.getRawSlot()==16) openRewardEditor(p,types[(e.getRawSlot()-10)/2]);
+            return;
+        }
+        if(title.startsWith("§4Редактор наград: ")) {
+            e.setCancelled(true);
+            if(!p.hasPermission("wertysmpcases.admin")) { p.closeInventory(); return; }
+            String type=title.substring("§4Редактор наград: ".length());
+            if(e.getRawSlot()==45) { openEditorHome(p); return; }
+            if(e.getRawSlot()==49) {
+                ItemStack held=p.getInventory().getItemInMainHand();
+                if(held.getType().isAir()) { p.sendMessage("§cВозьми предмет в основную руку."); return; }
+                String key="admin_added_"+UUID.randomUUID().toString().replace("-","");
+                String path="rewards."+type+"."+key;
+                getConfig().set(path+".material",held.getType().name());
+                getConfig().set(path+".min",held.getAmount());
+                getConfig().set(path+".max",held.getAmount());
+                getConfig().set(path+".chance",100.0);
+                getConfig().set(path+".display",held.hasItemMeta()&&held.getItemMeta().hasDisplayName()?held.getItemMeta().getDisplayName():held.getType().name());
+                getConfig().set(path+".custom-name",false);
+                saveConfig(); p.sendMessage("§aНаграда добавлена. Для настройки шанса измени chance в config.yml."); openRewardEditor(p,type); return;
+            }
+            if(e.getRawSlot()>=0&&e.getRawSlot()<45) {
+                ConfigurationSection section=getConfig().getConfigurationSection("rewards."+type);
+                if(section!=null) {
+                    List<String> keys=new ArrayList<>(section.getKeys(false));
+                    int visible=0; String selected=null;
+                    for(String key:keys) {
+                        ConfigurationSection reward=section.getConfigurationSection(key);
+                        if(reward==null||createReward(reward)==null) continue;
+                        if(visible++==e.getRawSlot()){selected=key;break;}
+                    }
+                    if(selected!=null){getConfig().set("rewards."+type+"."+selected,null);saveConfig();p.sendMessage("§eНаграда удалена.");openRewardEditor(p,type);}
+                }
+            }
+            return;
+        }
+
         if(title.equals("§5Топ кейсов")) e.setCancelled(true);
     }
 
@@ -458,7 +534,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
             sender.sendMessage("§7Также: /wcases give <игрок> <обычный|эпический|легендарный> [количество]");
             return true;
         }
-        if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } sender.sendMessage("§eРедактор кейсов: настрой награды в config.yml и используй /wcases reload (перезагрузка без перезапуска)."); return true; }
+        if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openEditorHome(p); return true; }
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } reloadConfig(); sender.sendMessage("§aКонфигурация перезагружена."); return true; }
         if (!sender.hasPermission("wertysmpcases.admin")) {
             sender.sendMessage("§cУ тебя нет прав на эту команду.");
