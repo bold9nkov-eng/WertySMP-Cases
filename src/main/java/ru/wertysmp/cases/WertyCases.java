@@ -41,7 +41,12 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
     private NamespacedKey blockKey;
     private final Random random = new Random();
     private int namePhase = 0;
-    private static final List<String> TYPES = List.of("ordinary", "epic", "legendary");
+    private final Map<UUID, Long> openingLocks = new HashMap<>();
+    private final Map<UUID, Integer> dailyClaimed = new HashMap<>();
+    private final Map<UUID, Map<String, Integer>> stats = new HashMap<>();
+    private final Map<UUID, Integer> dailyDay = new HashMap<>();
+    private final java.time.ZoneId dailyZone = java.time.ZoneId.of("Europe/Moscow");
+    private static final List<String> TYPES = List.of("ordinary", "epic", "legendary", "void");
     private static final List<String> TYPE_ALIASES = List.of("обычный", "эпический", "легендарный");
     private static final List<String> ARMOR_SLOTS = List.of("HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS");
 
@@ -49,8 +54,10 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         saveDefaultConfig();
         itemKey = new NamespacedKey(this, "case_type");
         blockKey = new NamespacedKey(this, "placed_case_type");
+        loadPersistentData();
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("wcases")).setTabCompleter(this);
+        if (getCommand("dailycase") != null) getCommand("dailycase").setExecutor(this);
         getLogger().info("WertySMP Cases Enhanced включён: анимации трёх кейсов.");
         getServer().getScheduler().runTaskTimer(this, () -> {
             namePhase = (namePhase + 1) % 4;
@@ -85,12 +92,13 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         return switch (type) {
             case "epic" -> Material.TRAPPED_CHEST;
             case "legendary" -> Material.ENDER_CHEST;
+            case "void" -> Material.RESPAWN_ANCHOR;
             default -> Material.CHEST;
         };
     }
 
     private boolean isChestMaterial(Material material) {
-        return material == Material.CHEST || material == Material.TRAPPED_CHEST || material == Material.ENDER_CHEST;
+        return material == Material.CHEST || material == Material.TRAPPED_CHEST || material == Material.ENDER_CHEST || material == Material.RESPAWN_ANCHOR;
     }
 
     private String color(String s) { return s == null ? "" : s.replace('&', '§'); }
@@ -135,7 +143,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
 
         // Кейс убирается сразу, поэтому повторно запустить открытие нельзя.
         block.setType(Material.AIR, false);
-        int duration = switch (type) { case "epic" -> 80; case "legendary" -> 120; default -> 48; };
+        int duration = switch (type) { case "epic" -> 80; case "legendary" -> 120; case "void" -> 160; default -> 48; };
         player.sendMessage("§5§lWertySMP §8» §fОткрывается " + caseName(type) + "§f...");
         player.playSound(location, type.equals("legendary") ? Sound.BLOCK_ENDER_CHEST_OPEN : Sound.BLOCK_CHEST_OPEN, 0.9f, type.equals("ordinary") ? 1.2f : 0.7f);
 
@@ -220,7 +228,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         }
         if (!player.isOnline()) return;
         player.sendMessage("§5§lWertySMP §8» §fОткрыт " + caseName(type) + "§f!");
-        if (granted == 0) player.sendMessage("§7В этот раз ничего дополнительного не выпало. Повезёт в следующий раз!");
+        stats.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).merge(type, 1, Integer::sum); savePersistentData();\n        if (granted == 0) player.sendMessage("§7В этот раз ничего дополнительного не выпало. Повезёт в следующий раз!");
         else {
             player.sendMessage("§fВыпало наград: §5" + granted);
             for (int i = 0; i < Math.min(8, won.size()); i++) player.sendMessage(" §8• " + won.get(i));
@@ -232,6 +240,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         return switch (type) {
             case "epic" -> "&5&lЭпический кейс";
             case "legendary" -> "&5&l✦ Легендарный кейс ✦";
+            case "void" -> "&5&l☄ Кейс Пустоты ☄";
             default -> "&f&lОбычный кейс";
         };
     }
@@ -327,14 +336,117 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.2, 0.5), createCase(type));
     }
 
+
+    private void loadPersistentData() {
+        saveDefaultConfig();
+        org.bukkit.configuration.file.YamlConfiguration data = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "data.yml"));
+        for (String key : data.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(key);
+                dailyClaimed.put(id, data.getInt(key + ".claimed-day", 0));
+                dailyDay.put(id, data.getInt(key + ".cycle-day", 1));
+                Map<String,Integer> map = new HashMap<>();
+                for (String type : TYPES) map.put(type, data.getInt(key + ".opens." + type, 0));
+                stats.put(id, map);
+            } catch (IllegalArgumentException ignored) { }
+        }
+    }
+    private void savePersistentData() {
+        org.bukkit.configuration.file.YamlConfiguration data = new org.bukkit.configuration.file.YamlConfiguration();
+        Set<UUID> ids = new HashSet<>(); ids.addAll(dailyClaimed.keySet()); ids.addAll(stats.keySet()); ids.addAll(dailyDay.keySet());
+        for (UUID id : ids) {
+            data.set(id + ".claimed-day", dailyClaimed.getOrDefault(id, 0));
+            data.set(id + ".cycle-day", dailyDay.getOrDefault(id, 1));
+            for (String type : TYPES) data.set(id + ".opens." + type, stats.getOrDefault(id, Map.of()).getOrDefault(type, 0));
+        }
+        try { data.save(new java.io.File(getDataFolder(), "data.yml")); }
+        catch (java.io.IOException ex) { getLogger().severe("Не удалось сохранить data.yml: " + ex.getMessage()); }
+    }
+    private int today() { return (int) java.time.LocalDate.now(dailyZone).toEpochDay(); }
+    private void openDaily(Player p) {
+        int today = today();
+        int claimed = dailyClaimed.getOrDefault(p.getUniqueId(), -1);
+        int cycle = dailyDay.getOrDefault(p.getUniqueId(), 1);
+        org.bukkit.inventory.Inventory inv = Bukkit.createInventory(null, 27, "§5Ежедневные награды");
+        for (int day=1; day<=15; day++) {
+            Material m = day < cycle ? Material.LIME_STAINED_GLASS_PANE : day == cycle && claimed != today ? Material.GOLD_INGOT : Material.GRAY_STAINED_GLASS_PANE;
+            ItemStack item = new ItemStack(m); ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName((day < cycle ? "§a✓ День " : day == cycle && claimed != today ? "§e★ День " : "§8🔒 День ") + day);
+            List<String> lore = new ArrayList<>();
+            lore.add(day < cycle ? "§aУже получено" : day == cycle && claimed != today ? "§eНажми, чтобы получить награду" : "§7Пока недоступно");
+            if (day == 5 || day == 10) lore.add("§5Эпический кейс");
+            else if (day == 15) lore.add("§6Легендарный кейс");
+            else lore.add("§fОбычный кейс");
+            meta.setLore(lore); item.setItemMeta(meta); inv.setItem(day-1, item);
+        }
+        ItemStack info = new ItemStack(Material.CLOCK); ItemMeta im = info.getItemMeta();
+        im.setDisplayName("§dЦикл: день " + cycle + "/15");
+        im.setLore(List.of("§7Часовой пояс: " + dailyZone, "§7Следующая смена дня — в полночь"));
+        info.setItemMeta(im); inv.setItem(22, info);
+        p.openInventory(inv);
+    }
+    private void openPreview(Player p, String type, int page) {
+        ConfigurationSection section = getConfig().getConfigurationSection("rewards." + type);
+        if (section == null) { p.sendMessage("§cНаграды для этого кейса не настроены."); return; }
+        List<ItemStack> items = new ArrayList<>();
+        for (String key : section.getKeys(false)) {
+            ConfigurationSection r = section.getConfigurationSection(key); if (r == null) continue;
+            ItemStack item = createReward(r); if (item == null) continue;
+            item.setAmount(Math.max(1, Math.min(item.getMaxStackSize(), r.getInt("min", r.getInt("amount", 1)))));
+            ItemMeta meta = item.getItemMeta();
+            meta.setDisplayName(color(r.getString("display", key)));
+            List<String> lore = new ArrayList<>(); lore.add("§7Количество: §f" + r.getInt("min", r.getInt("amount",1)) + (r.getInt("max", r.getInt("min",1)) != r.getInt("min", r.getInt("amount",1)) ? "–" + r.getInt("max",r.getInt("min",1)) : ""));
+            lore.add("§7Шанс на каждую награду: §e" + r.getDouble("chance",0) + "%"); lore.add("§8Каждая награда проверяется отдельно.");
+            meta.setLore(lore); item.setItemMeta(meta); items.add(item);
+        }
+        int pages = Math.max(1, (items.size()+44)/45); int safePage = Math.max(0, Math.min(page,pages-1));
+        org.bukkit.inventory.Inventory inv = Bukkit.createInventory(null, 54, "§5Награды: " + type + " §8("+(safePage+1)+"/"+pages+")");
+        for(int i=safePage*45;i<Math.min(items.size(),(safePage+1)*45);i++) inv.setItem(i-safePage*45,items.get(i));
+        if(safePage>0) inv.setItem(45, named(Material.ARROW,"§eПредыдущая страница"));
+        inv.setItem(49,named(Material.BOOK,"§dСтраница "+(safePage+1)+" из "+pages));
+        if(safePage+1<pages) inv.setItem(53,named(Material.ARROW,"§eСледующая страница"));
+        p.openInventory(inv);
+    }
+    private ItemStack named(Material material, String name) { ItemStack i=new ItemStack(material); ItemMeta m=i.getItemMeta(); m.setDisplayName(name); i.setItemMeta(m); return i; }
+    private void openTop(Player p) {
+        org.bukkit.inventory.Inventory inv=Bukkit.createInventory(null,27,"§5Топ кейсов");
+        String[] types={"ordinary","epic","legendary","void"};
+        Material[] icons={Material.CHEST,Material.TRAPPED_CHEST,Material.ENDER_CHEST,Material.RESPAWN_ANCHOR};
+        for(int i=0;i<types.length;i++){
+            ItemStack item=new ItemStack(icons[i]); ItemMeta meta=item.getItemMeta();
+            meta.setDisplayName("§d"+caseName(types[i]));
+            List<String> lore=new ArrayList<>(); stats.entrySet().stream().sorted((a,b)->Integer.compare(b.getValue().getOrDefault(types[i],0),a.getValue().getOrDefault(types[i],0))).limit(10).forEach(e->{String name=Bukkit.getOfflinePlayer(e.getKey()).getName(); lore.add("§7"+(name==null?e.getKey().toString().substring(0,8):name)+" §8— §f"+e.getValue().getOrDefault(types[i],0));});
+            if(lore.isEmpty()) lore.add("§7Пока нет открытий"); meta.setLore(lore); item.setItemMeta(meta); inv.setItem(10+i*2,item);
+        }
+        p.openInventory(inv);
+    }
+    @EventHandler public void onMenuClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        String title=e.getView().getTitle();
+        if(title.equals("§5Ежедневные награды")) {
+            e.setCancelled(true); if(e.getRawSlot()<0||e.getRawSlot()>=27) return;
+            int day=e.getRawSlot()+1; int today=today(); int cycle=dailyDay.getOrDefault(p.getUniqueId(),1);
+            if(day!=cycle || dailyClaimed.getOrDefault(p.getUniqueId(),-1)==today) return;
+            String type=(day==5||day==10)?"epic":day==15?"legendary":"ordinary";
+            ItemStack reward=createCase(type);
+            if(p.getInventory().firstEmpty()==-1){p.sendMessage("§cОсвободи слот инвентаря и попробуй снова.");return;}
+            p.getInventory().addItem(reward); dailyClaimed.put(p.getUniqueId(),today);
+            dailyDay.put(p.getUniqueId(),day==15?1:day+1); savePersistentData(); p.sendMessage("§aЕжедневная награда получена: "+caseName(type)); p.closeInventory(); return;
+        }
+        if(title.startsWith("§5Награды:")) {
+            e.setCancelled(true); if(e.getRawSlot()==45||e.getRawSlot()==53){String[] bits=title.split("\\("); int page=0; try{page=Integer.parseInt(bits[1].split("/")[0])-1;}catch(Exception ignored){} openPreview(p,title.contains("void")?"void":title.contains("epic")?"epic":title.contains("legendary")?"legendary":"ordinary",page+(e.getRawSlot()==53?1:-1));} return;
+        }
+        if(title.equals("§5Топ кейсов")) e.setCancelled(true);
+    }
+
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!command.getName().equalsIgnoreCase("wcases")) return false;
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+        if (command.getName().equalsIgnoreCase("dailycase")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок может открыть меню."); return true; } openDaily(p); return true; }\n        if (!command.getName().equalsIgnoreCase("wcases")) return false;
+        if (args.length > 0 && args[0].equalsIgnoreCase("daily")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openDaily(p); return true; }\n        if (args.length > 0 && (args[0].equalsIgnoreCase("top"))) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openTop(p); return true; }\n        if (args.length > 0 && args[0].equalsIgnoreCase("preview")) { if (!(sender instanceof Player p) || args.length < 2) { sender.sendMessage("Использование: /wcases preview <ordinary|epic|legendary|void>"); return true; } String t=normalizeType(args[1]); if(t==null){sender.sendMessage("Неизвестный кейс.");return true;} openPreview(p,t,0); return true; }\n        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             sender.sendMessage("§6WertySMP Cases §7— §f/wcases give <игрок> <ordinary|epic|legendary> [количество]");
             sender.sendMessage("§7Также: /wcases give <игрок> <обычный|эпический|легендарный> [количество]");
             return true;
         }
-        if (!sender.hasPermission("wertysmpcases.admin")) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } sender.sendMessage("§eРедактор кейсов: настрой награды в config.yml и используй /wcases reload (перезагрузка без перезапуска)."); return true; }\n        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } reloadConfig(); sender.sendMessage("§aКонфигурация перезагружена."); return true; }\n        if (!sender.hasPermission("wertysmpcases.admin")) {
             sender.sendMessage("§cУ тебя нет прав на эту команду.");
             return true;
         }
@@ -375,7 +487,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return List.of("give", "help");
+        if (args.length == 1) return List.of("give", "help", "daily", "top", "preview", "editor", "reload");
         if (args.length == 2 && args[0].equalsIgnoreCase("give")) return Bukkit.getOnlinePlayers().stream().map(Player::getName).filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
         if (args.length == 3 && args[0].equalsIgnoreCase("give")) return List.of("ordinary", "epic", "legendary", "обычный", "эпический", "легендарный");
         if (args.length == 4 && args[0].equalsIgnoreCase("give")) return List.of("1", "2", "5", "10");
