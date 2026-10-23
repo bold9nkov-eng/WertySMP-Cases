@@ -496,6 +496,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
             case "ordinary", "обычный", "обычный_кейс" -> "ordinary";
             case "epic", "эпический", "эпик" -> "epic";
             case "legendary", "легендарный", "легендарка" -> "legendary";
+            case "void", "пустота", "void-кейс" -> "void";
             default -> null;
         };
     }
