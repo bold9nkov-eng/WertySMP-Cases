@@ -234,7 +234,8 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         }
         if (!player.isOnline()) return;
         player.sendMessage("§5§lWertySMP §8» §fОткрыт " + caseName(type) + "§f!");
-        stats.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).merge(type, 1, Integer::sum); savePersistentData();\n        if (granted == 0) player.sendMessage("§7В этот раз ничего дополнительного не выпало. Повезёт в следующий раз!");
+        stats.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).merge(type, 1, Integer::sum); savePersistentData();
+        if (granted == 0) player.sendMessage("§7В этот раз ничего дополнительного не выпало. Повезёт в следующий раз!");
         else {
             player.sendMessage("§fВыпало наград: §5" + granted);
             for (int i = 0; i < Math.min(8, won.size()); i++) player.sendMessage(" §8• " + won.get(i));
@@ -447,13 +448,19 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("dailycase")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок может открыть меню."); return true; } openDaily(p); return true; }\n        if (!command.getName().equalsIgnoreCase("wcases")) return false;
-        if (args.length > 0 && args[0].equalsIgnoreCase("daily")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openDaily(p); return true; }\n        if (args.length > 0 && (args[0].equalsIgnoreCase("top"))) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openTop(p); return true; }\n        if (args.length > 0 && args[0].equalsIgnoreCase("preview")) { if (!(sender instanceof Player p) || args.length < 2) { sender.sendMessage("Использование: /wcases preview <ordinary|epic|legendary|void>"); return true; } String t=normalizeType(args[1]); if(t==null){sender.sendMessage("Неизвестный кейс.");return true;} openPreview(p,t,0); return true; }\n        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
+        if (command.getName().equalsIgnoreCase("dailycase")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок может открыть меню."); return true; } openDaily(p); return true; }
+        if (!command.getName().equalsIgnoreCase("wcases")) return false;
+        if (args.length > 0 && args[0].equalsIgnoreCase("daily")) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openDaily(p); return true; }
+        if (args.length > 0 && (args[0].equalsIgnoreCase("top"))) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openTop(p); return true; }
+        if (args.length > 0 && args[0].equalsIgnoreCase("preview")) { if (!(sender instanceof Player p) || args.length < 2) { sender.sendMessage("Использование: /wcases preview <ordinary|epic|legendary|void>"); return true; } String t=normalizeType(args[1]); if(t==null){sender.sendMessage("Неизвестный кейс.");return true;} openPreview(p,t,0); return true; }
+        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
             sender.sendMessage("§6WertySMP Cases §7— §f/wcases give <игрок> <ordinary|epic|legendary> [количество]");
             sender.sendMessage("§7Также: /wcases give <игрок> <обычный|эпический|легендарный> [количество]");
             return true;
         }
-        if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } sender.sendMessage("§eРедактор кейсов: настрой награды в config.yml и используй /wcases reload (перезагрузка без перезапуска)."); return true; }\n        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } reloadConfig(); sender.sendMessage("§aКонфигурация перезагружена."); return true; }\n        if (!sender.hasPermission("wertysmpcases.admin")) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } sender.sendMessage("§eРедактор кейсов: настрой награды в config.yml и используй /wcases reload (перезагрузка без перезапуска)."); return true; }
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } reloadConfig(); sender.sendMessage("§aКонфигурация перезагружена."); return true; }
+        if (!sender.hasPermission("wertysmpcases.admin")) {
             sender.sendMessage("§cУ тебя нет прав на эту команду.");
             return true;
         }
