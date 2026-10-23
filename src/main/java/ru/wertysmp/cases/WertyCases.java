@@ -45,13 +45,14 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
     private final Map<UUID, Integer> dailyClaimed = new HashMap<>();
     private final Map<UUID, Map<String, Integer>> stats = new HashMap<>();
     private final Map<UUID, Integer> dailyDay = new HashMap<>();
-    private final java.time.ZoneId dailyZone = java.time.ZoneId.of("Europe/Moscow");
+    private java.time.ZoneId dailyZone = java.time.ZoneId.of("Europe/Moscow");
     private static final List<String> TYPES = List.of("ordinary", "epic", "legendary", "void");
     private static final List<String> TYPE_ALIASES = List.of("обычный", "эпический", "легендарный");
     private static final List<String> ARMOR_SLOTS = List.of("HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS");
 
     @Override public void onEnable() {
         saveDefaultConfig();
+        try { dailyZone = java.time.ZoneId.of(getConfig().getString("daily.timezone", "Europe/Moscow")); } catch (Exception ex) { getLogger().warning("Неверный daily.timezone, используется Europe/Moscow"); dailyZone = java.time.ZoneId.of("Europe/Moscow"); }
         itemKey = new NamespacedKey(this, "case_type");
         blockKey = new NamespacedKey(this, "placed_case_type");
         loadPersistentData();
@@ -92,13 +93,13 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         return switch (type) {
             case "epic" -> Material.TRAPPED_CHEST;
             case "legendary" -> Material.ENDER_CHEST;
-            case "void" -> Material.RESPAWN_ANCHOR;
+            case "void" -> Material.PURPLE_SHULKER_BOX;
             default -> Material.CHEST;
         };
     }
 
     private boolean isChestMaterial(Material material) {
-        return material == Material.CHEST || material == Material.TRAPPED_CHEST || material == Material.ENDER_CHEST || material == Material.RESPAWN_ANCHOR;
+        return material == Material.CHEST || material == Material.TRAPPED_CHEST || material == Material.ENDER_CHEST || material == Material.PURPLE_SHULKER_BOX;
     }
 
     private String color(String s) { return s == null ? "" : s.replace('&', '§'); }
