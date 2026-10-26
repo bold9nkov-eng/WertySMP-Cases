@@ -210,17 +210,39 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         }
         int granted = 0;
         List<String> won = new ArrayList<>();
-        for (String key : rewards.getKeys(false)) {
+        List<String> rewardKeys = new ArrayList<>(rewards.getKeys(false));
+        if (type.equals("void")) {
+            // В кейсе Пустоты: 75% шанс получить одну награду; веса из config.yml выбирают награду.
+            rewardKeys.clear();
+            if (random.nextDouble() < 0.75) {
+                double totalWeight = 0.0;
+                for (String key : rewards.getKeys(false)) {
+                    ConfigurationSection candidate = rewards.getConfigurationSection(key);
+                    if (candidate != null) totalWeight += Math.max(0.0, candidate.getDouble("chance", 0.0));
+                }
+                if (totalWeight > 0.0) {
+                    double roll = random.nextDouble() * totalWeight;
+                    for (String key : rewards.getKeys(false)) {
+                        ConfigurationSection candidate = rewards.getConfigurationSection(key);
+                        if (candidate == null) continue;
+                        roll -= Math.max(0.0, candidate.getDouble("chance", 0.0));
+                        if (roll < 0.0) { rewardKeys.add(key); break; }
+                    }
+                }
+            }
+        }
+        for (String key : rewardKeys) {
             ConfigurationSection reward = rewards.getConfigurationSection(key);
             if (reward == null) continue;
             double chance = reward.getDouble("chance", 0.0);
-            if (chance <= 0 || random.nextDouble() * 100.0 >= chance) continue;
+            if (!type.equals("void") && (chance <= 0 || random.nextDouble() * 100.0 >= chance)) continue;
             ItemStack prize = createReward(reward);
             if (prize == null) {
                 getLogger().warning("Пропущена неверная награда '" + key + "' в rewards." + type);
                 continue;
             }
             int amount = randomAmount(reward);
+            if (type.equals("void")) amount = Math.min(2304, amount * 3);
             prize.setAmount(1);
             if (player.isOnline()) giveStacked(player, prize, amount);
             else if (world != null) {
@@ -534,8 +556,13 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         if (args.length > 0 && (args[0].equalsIgnoreCase("top"))) { if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openTop(p); return true; }
         if (args.length > 0 && args[0].equalsIgnoreCase("preview")) { if (!(sender instanceof Player p) || args.length < 2) { sender.sendMessage("Использование: /wcases preview <ordinary|epic|legendary|void>"); return true; } String t=normalizeType(args[1]); if(t==null){sender.sendMessage("Неизвестный кейс.");return true;} openPreview(p,t,0); return true; }
         if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            sender.sendMessage("§6WertySMP Cases §7— §f/wcases give <игрок> <ordinary|epic|legendary> [количество]");
-            sender.sendMessage("§7Также: /wcases give <игрок> <обычный|эпический|легендарный> [количество]");
+            sender.sendMessage("§6WertySMP Cases §7— доступные команды:");
+            sender.sendMessage("§f/wcaces give <игрок> <ordinary|epic|legendary|void> [количество]");
+            sender.sendMessage("§f/wcaces daily §7— ежедневные награды");
+            sender.sendMessage("§f/wcaces top §7— топ открытий кейсов");
+            sender.sendMessage("§f/wcaces preview <тип> §7— просмотр наград");
+            sender.sendMessage("§f/wcaces editor §7— редактор (админ)");
+            sender.sendMessage("§f/wcaces reload §7— перезагрузка конфига");
             return true;
         }
         if (args.length > 0 && args[0].equalsIgnoreCase("editor")) { if (!sender.hasPermission("wertysmpcases.admin")) { sender.sendMessage("§cНет прав."); return true; } if (!(sender instanceof Player p)) { sender.sendMessage("Только игрок."); return true; } openEditorHome(p); return true; }
@@ -555,7 +582,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         }
         String type = normalizeType(args[2]);
         if (type == null) {
-            sender.sendMessage("§cТип: ordinary, epic, legendary (обычный, эпический, легендарный).");
+            sender.sendMessage("§cТип: ordinary, epic, legendary, void (обычный, эпический, легендарный, Пустота).");
             return true;
         }
         int amount = 1;
@@ -582,9 +609,9 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return List.of("give", "help", "daily", "top", "preview", "editor", "reload");
+        if (args.length == 1) return List.of("give", "daily", "top", "preview", "editor", "reload", "help");
         if (args.length == 2 && args[0].equalsIgnoreCase("give")) return Bukkit.getOnlinePlayers().stream().map(Player::getName).filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))).toList();
-        if (args.length == 3 && args[0].equalsIgnoreCase("give")) return List.of("ordinary", "epic", "legendary", "обычный", "эпический", "легендарный");
+        if (args.length == 3 && args[0].equalsIgnoreCase("give")) return List.of("ordinary", "epic", "legendary", "void", "обычный", "эпический", "легендарный", "пустота");
         if (args.length == 4 && args[0].equalsIgnoreCase("give")) return List.of("1", "2", "5", "10");
         return Collections.emptyList();
     }
