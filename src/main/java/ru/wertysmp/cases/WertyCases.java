@@ -61,8 +61,9 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         getConfig().options().copyDefaults(true);
         saveConfig();
         try { dailyZone = java.time.ZoneId.of(getConfig().getString("daily.timezone", "Europe/Moscow")); } catch (Exception ex) { getLogger().warning("Неверный daily.timezone, используется Europe/Moscow"); dailyZone = java.time.ZoneId.of("Europe/Moscow"); }
-        itemKey = new NamespacedKey(this, "case_type");
-        blockKey = new NamespacedKey(this, "placed_case_type");
+        // Keep the original namespace so existing WertySMP-Cases items and placed blocks remain valid after renaming.
+        itemKey = new NamespacedKey("wertysmp-cases", "case_type");
+        blockKey = new NamespacedKey("wertysmp-cases", "placed_case_type");
         loadPersistentData();
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("case"), "Команда /case отсутствует в plugin.yml").setExecutor(this);
