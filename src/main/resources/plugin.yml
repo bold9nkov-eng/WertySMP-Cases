@@ -1,19 +1,17 @@
-name: WertySMP-Cases
-version: 2.0.1
+name: Void-cases-v2
+version: 3.0.0
 main: ru.wertysmp.cases.WertyCases
 api-version: '1.21'
-author: WertySMP
-description: Кейсы WertySMP с анимациями открытия и независимыми шансами наград
+author: VoidMain
+description: Void Cases v2 — создание кейсов и настройка добычи через GUI
 commands:
-  wcases:
-    description: Выдача кейсов WertySMP
-    usage: /wcases give <игрок> <ordinary|epic|legendary> [количество]
-    aliases: [wertycases, кейсы, cases, wcaces]
-  dailycase:
-    description: Открыть меню ежедневных наград
-    usage: /dailycase
-    aliases: [daily, dailycases]
+  case:
+    description: Управление кейсами Void Cases
+    usage: /case help
 permissions:
+  voidcases.admin:
+    description: Полный доступ к управлению кейсами и наградами
+    default: op
   wertysmpcases.admin:
-    description: Позволяет выдавать кейсы игрокам
+    description: Совместимость со старым разрешением WertySMP-Cases
     default: op
