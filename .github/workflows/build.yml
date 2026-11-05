@@ -1,4 +1,4 @@
-name: Build WertySMP-Cases
+name: Build Void-cases-v2
 on:
   push:
     branches: [main]
@@ -20,12 +20,13 @@ jobs:
         run: mvn --batch-mode clean package
       - name: Verify JAR
         run: |
-          test -f target/wertysmp-cases-2.0.2.jar
-          jar tf target/wertysmp-cases-2.0.2.jar | grep -E 'plugin.yml|WertyCases.class'
-          sha256sum target/wertysmp-cases-2.0.2.jar
+          test -f target/void-cases-v2-3.0.0.jar
+          jar tf target/void-cases-v2-3.0.0.jar | grep -E 'plugin.yml|WertyCases.class'
+          unzip -p target/void-cases-v2-3.0.0.jar plugin.yml | grep -E '^name: Void-cases-v2|^version: 3.0.0|^  case:'
+          sha256sum target/void-cases-v2-3.0.0.jar
       - uses: actions/upload-artifact@v4
         with:
-          name: WertySMP-Cases-2.0.2
-          path: target/wertysmp-cases-2.0.2.jar
+          name: Void-cases-v2-3.0.0
+          path: target/void-cases-v2-3.0.0.jar
           if-no-files-found: error
           retention-days: 30
