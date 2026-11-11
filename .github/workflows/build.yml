@@ -2,6 +2,8 @@ name: Build Void-cases-v2
 on:
   push:
     branches: [main, voidcases-3.0.0-global-animation]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
