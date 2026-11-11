@@ -16,6 +16,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.TileState;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -213,7 +214,29 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         block.setType(Material.AIR, false);
         int duration = switch (type) { case "epic" -> 80; case "legendary" -> 120; case "void" -> 160; default -> 48; };
         player.sendMessage("§5§lWertySMP §8» §fОткрывается " + caseName(type) + "§f...");
-        player.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_ENDER_CHEST_OPEN : Sound.BLOCK_CHEST_OPEN, 0.9f, type.equals("ordinary") ? 1.2f : 0.7f);
+        world.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_ENDER_CHEST_OPEN : Sound.BLOCK_CHEST_OPEN, 0.9f, type.equals("ordinary") ? 1.2f : 0.7f);
+
+        // Shared world animation: every nearby player sees the same rotating reward items.
+        List<ItemDisplay> orbitItems = new ArrayList<>();
+        ConfigurationSection previewSection = getConfig().getConfigurationSection("rewards." + type);
+        if (previewSection != null) {
+            List<String> previewKeys = new ArrayList<>(previewSection.getKeys(false));
+            Collections.shuffle(previewKeys, random);
+            for (String key : previewKeys) {
+                if (orbitItems.size() >= 5) break;
+                ConfigurationSection reward = previewSection.getConfigurationSection(key);
+                if (reward == null) continue;
+                ItemStack preview = createReward(reward);
+                if (preview == null) continue;
+                preview.setAmount(1);
+                ItemDisplay display = world.spawn(location.clone().add(0, 0.9, 0), ItemDisplay.class);
+                display.setItemStack(preview);
+                display.setGravity(false);
+                display.setInvulnerable(true);
+                display.setSilent(true);
+                orbitItems.add(display);
+            }
+        }
 
         new org.bukkit.scheduler.BukkitRunnable() {
             int tick = 0;
@@ -222,6 +245,18 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
                 double radius = 0.25 + 0.85 * progress;
                 double angle = tick * ((type.equals("legendary") || type.equals("void")) ? 0.42 : type.equals("epic") ? 0.30 : 0.22);
                 Location center = location.clone().add(0, 0.65 + Math.sin(angle) * 0.12, 0);
+                for (int i = 0; i < orbitItems.size(); i++) {
+                    double itemAngle = angle + i * Math.PI * 2.0 / Math.max(1, orbitItems.size());
+                    double itemRadius = 0.95 - progress * 0.45;
+                    Location itemLocation = center.clone().add(Math.cos(itemAngle) * itemRadius,
+                            0.15 + Math.sin(itemAngle * 1.7) * 0.12,
+                            Math.sin(itemAngle) * itemRadius);
+                    ItemDisplay display = orbitItems.get(i);
+                    if (display.isValid()) {
+                        display.teleport(itemLocation);
+                        display.setRotation((float) Math.toDegrees(itemAngle + Math.PI / 2.0), 0.0f);
+                    }
+                }
                 for (int i = 0; i < 3; i++) {
                     double a = angle + i * Math.PI * 2 / 3;
                     Location point = center.clone().add(Math.cos(a) * radius, Math.sin(angle * 0.7 + i) * 0.18, Math.sin(a) * radius);
@@ -236,24 +271,27 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
                         world.spawnParticle(Particle.HAPPY_VILLAGER, point, 2, 0.06, 0.08, 0.06, 0.01);
                     }
                 }
-                if (tick % 8 == 0) player.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_BEACON_AMBIENT : Sound.BLOCK_NOTE_BLOCK_PLING, 0.35f, 0.6f + (float) progress * 1.3f);
+                if (tick % 8 == 0) world.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_BEACON_AMBIENT : Sound.BLOCK_NOTE_BLOCK_PLING, 0.35f, 0.6f + (float) progress * 1.3f);
                 if (tick >= duration) {
                     world.spawnParticle(Particle.EXPLOSION, center, type.equals("legendary") ? 2 : 1, 0.2, 0.2, 0.2, 0);
                     if (type.equals("void")) {
                         world.spawnParticle(Particle.DUST, center, 180, 0.9, 0.9, 0.9, new DustOptions(Color.fromRGB(20, 0, 35), 2.4f));
                         world.spawnParticle(Particle.PORTAL, center, 160, 0.8, 0.8, 0.8, 0.35);
                         world.spawnParticle(Particle.WITCH, center, 100, 0.7, 0.7, 0.7, 0.12);
-                        player.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.55f);
+                        world.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.55f);
                     } else if (type.equals("legendary")) {
                         world.spawnParticle(Particle.DUST, center, 100, 0.8, 0.8, 0.8, new DustOptions(Color.fromRGB(35, 0, 55), 2.0f));
                         world.spawnParticle(Particle.PORTAL, center, 100, 0.8, 0.8, 0.8, 0.25);
-                        player.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.7f);
+                        world.playSound(location, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 0.7f);
                     } else if (type.equals("epic")) {
                         world.spawnParticle(Particle.WITCH, center, 70, 0.6, 0.7, 0.6, 0.1);
-                        player.playSound(location, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 0.8f);
+                        world.playSound(location, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 0.8f);
                     } else {
                         world.spawnParticle(Particle.HAPPY_VILLAGER, center, 45, 0.5, 0.5, 0.5, 0.1);
-                        player.playSound(location, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.4f);
+                        world.playSound(location, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.4f);
+                    }
+                    for (ItemDisplay display : orbitItems) {
+                        if (display.isValid()) display.remove();
                     }
                     finishOpen(player, location, type);
                     cancel();
