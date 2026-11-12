@@ -71,6 +71,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
         Objects.requireNonNull(getCommand("case"), "Команда /case отсутствует в plugin.yml").setTabCompleter(this);
         getLogger().info("Void-cases-v2 включён: редактор кейсов и наград готов.");
         getServer().getScheduler().runTaskTimer(this, () -> {
+            if (!getConfig().getBoolean("animation.name.enabled", false)) return;
             namePhase = (namePhase + 1) % 4;
             for (Player online : Bukkit.getOnlinePlayers()) {
                 ItemStack[] contents = online.getInventory().getContents();
@@ -416,6 +417,7 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
 
     private String animatedText(String raw, String type, int phase) {
         if (raw == null) return "";
+        if (!getConfig().getBoolean("animation.name.enabled", false)) return color(raw);
         String plain = raw.replaceAll("&[0-9a-fk-orA-FK-OR]", "");
         StringBuilder out = new StringBuilder();
         String[] ordinary = {"§f", "§b", "§f", "§3"};
