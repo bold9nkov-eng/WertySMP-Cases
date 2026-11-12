@@ -231,6 +231,13 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
                 preview.setAmount(1);
                 ItemDisplay display = world.spawn(location.clone().add(0, 0.9, 0), ItemDisplay.class);
                 display.setItemStack(preview);
+                // Make block rewards noticeably smaller than flat/small items during the orbit.
+                float displayScale = preview.getType().isBlock() ? 0.28f : 0.40f;
+                display.setTransformation(new org.bukkit.util.Transformation(
+                        new org.joml.Vector3f(0.0f, 0.0f, 0.0f),
+                        new org.joml.AxisAngle4f(0.0f, 0.0f, 1.0f, 0.0f),
+                        new org.joml.Vector3f(displayScale, displayScale, displayScale),
+                        new org.joml.AxisAngle4f(0.0f, 0.0f, 1.0f, 0.0f)));
                 display.setGravity(false);
                 display.setInvulnerable(true);
                 display.setSilent(true);
@@ -269,6 +276,34 @@ public final class WertyCases extends JavaPlugin implements Listener, TabComplet
                     } else {
                         world.spawnParticle(Particle.END_ROD, point, 1, 0.02, 0.04, 0.02, 0.005);
                         world.spawnParticle(Particle.HAPPY_VILLAGER, point, 2, 0.06, 0.08, 0.06, 0.01);
+                    }
+                }
+                // Additional animated particle helix: a moving purple/silver ribbon around the rewards.
+                for (int p = 0; p < 8; p++) {
+                    double ribbonAngle = angle * 1.35 + p * Math.PI * 2.0 / 8.0;
+                    double ribbonRadius = 0.62 + Math.sin(angle * 0.8 + p) * 0.10;
+                    Location ribbonPoint = center.clone().add(
+                            Math.cos(ribbonAngle) * ribbonRadius,
+                            -0.12 + p * 0.055 + Math.sin(angle + p * 0.45) * 0.10,
+                            Math.sin(ribbonAngle) * ribbonRadius);
+                    if (type.equals("void") || type.equals("legendary")) {
+                        world.spawnParticle(Particle.DUST, ribbonPoint, 2, 0.015, 0.025, 0.015,
+                                new DustOptions(Color.fromRGB(125, 35, 220), 0.75f));
+                        if (p % 2 == 0) world.spawnParticle(Particle.PORTAL, ribbonPoint, 1, 0.015, 0.02, 0.015, 0.01);
+                    } else if (type.equals("epic")) {
+                        world.spawnParticle(Particle.WITCH, ribbonPoint, 1, 0.02, 0.025, 0.02, 0.01);
+                        if (p % 2 == 0) world.spawnParticle(Particle.END_ROD, ribbonPoint, 1, 0.01, 0.015, 0.01, 0.002);
+                    } else {
+                        world.spawnParticle(Particle.END_ROD, ribbonPoint, 1, 0.01, 0.02, 0.01, 0.002);
+                        if (p % 2 == 0) world.spawnParticle(Particle.HAPPY_VILLAGER, ribbonPoint, 1, 0.015, 0.02, 0.015, 0.005);
+                    }
+                }
+                // Small sparkle trails follow each rotating reward.
+                for (ItemDisplay display : orbitItems) {
+                    if (display.isValid() && random.nextDouble() < 0.65) {
+                        Location sparkle = display.getLocation().clone().add(0.0, 0.10, 0.0);
+                        world.spawnParticle(type.equals("ordinary") ? Particle.END_ROD : Particle.PORTAL,
+                                sparkle, 1, 0.025, 0.025, 0.025, 0.005);
                     }
                 }
                 if (tick % 8 == 0) world.playSound(location, (type.equals("legendary") || type.equals("void")) ? Sound.BLOCK_BEACON_AMBIENT : Sound.BLOCK_NOTE_BLOCK_PLING, 0.35f, 0.6f + (float) progress * 1.3f);
